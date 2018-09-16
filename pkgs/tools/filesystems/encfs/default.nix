@@ -14,6 +14,8 @@ stdenv.mkDerivation rec {
     owner = "vgough";
   };
 
+  patches = [ ./utime.patch ];
+
   buildInputs = [ gettext fuse openssl tinyxml2 ];
   nativeBuildInputs = [ cmake pkgconfig perl ];
 
