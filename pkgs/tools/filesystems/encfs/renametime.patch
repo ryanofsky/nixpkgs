@@ -1,0 +1,64 @@
+commit a93e6c8b1db5e857f7e22ad542b6ec0191d32687
+Author: Russell Yanofsky <russ@yanofsky.org>
+Date:   Wed Sep 19 00:35:31 2018 -0400
+
+    Remove rename ::utime calls
+    
+    ::utime calls cause subsecond mtimes to be truncated to the nearest
+    second, and cause symlink targets to be affected when symlinks are
+    renamed.
+    
+    Unclear what original purpose of these calls was since they seem safe to
+    remove.
+
+diff --git a/encfs/DirNode.cpp b/encfs/DirNode.cpp
+index ff71f18..774b152 100644
+--- a/encfs/DirNode.cpp
++++ b/encfs/DirNode.cpp
+@@ -183,9 +183,6 @@ bool RenameOp::apply() {
+       // backing store rename.
+       VLOG(1) << "renaming " << last->oldCName << " -> " << last->newCName;
+ 
+-      struct stat st;
+-      bool preserve_mtime = ::stat(last->oldCName.c_str(), &st) == 0;
+-
+       // internal node rename..
+       dn->renameNode(last->oldPName.c_str(), last->newPName.c_str());
+ 
+@@ -198,13 +195,6 @@ bool RenameOp::apply() {
+         return false;
+       }
+ 
+-      if (preserve_mtime) {
+-        struct utimbuf ut;
+-        ut.actime = st.st_atime;
+-        ut.modtime = st.st_mtime;
+-        ::utime(last->newCName.c_str(), &ut);
+-      }
+-
+       ++last;
+     }
+ 
+@@ -585,9 +575,6 @@ int DirNode::rename(const char *fromPlaintext, const char *toPlaintext) {
+ 
+   int res = 0;
+   try {
+-    struct stat st;
+-    bool preserve_mtime = ::stat(fromCName.c_str(), &st) == 0;
+-
+     renameNode(fromPlaintext, toPlaintext);
+     res = ::rename(fromCName.c_str(), toCName.c_str());
+ 
+@@ -613,12 +600,6 @@ int DirNode::rename(const char *fromPlaintext, const char *toPlaintext) {
+         //ctx->putNode(fromPlaintext, toNode);
+       }
+ #endif
+-      if (preserve_mtime) {
+-        struct utimbuf ut;
+-        ut.actime = st.st_atime;
+-        ut.modtime = st.st_mtime;
+-        ::utime(toCName.c_str(), &ut);
+-      }
+     }
+   } catch (encfs::Error &err) {
+     // exception from renameNode, just show the error and continue..
